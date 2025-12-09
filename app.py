@@ -9,7 +9,9 @@ st.set_page_config(layout="wide")
 if "page" not in st.session_state:
   st.session_state.page = "question1"
 if "pianoAccuracy" not in st.session_state:
-    st.session_state.pianoAccuracy = 88
+  st.session_state.pianoAccuracy = 88
+if "rythmAccuracy" not in st.session_state:
+  st.session_state.rythmAccuracy = 0
 
 # Navigation callbacks
 
@@ -27,6 +29,9 @@ def go_q4():
 
 def go_q5():
     st.session_state.page = "question5"
+
+def go_rythemPage():
+    st.session_state.page = "rythemPage"
 
 def go_pianoPage():
    st.session_state.page = "pianoPage"
@@ -1079,10 +1084,94 @@ export default function(component) {{
 
     if response and hasattr(response, "getQ5Response"):
         st.session_state.q5Score = response.getQ5Response
-        go_pianoPage()
+        go_rythemPage()
         st.rerun()
 
+def rythemPage():
+
+    html_code = """
+        <div style="
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            height: 50vh;
+            padding-top: 100px;  /* Adjust this to move text higher or lower */
+            background-color: white;
+            font-family: Arial, sans-serif;
+        ">
+            <div style="
+                font-size: 48px;
+                font-weight: bold;
+                margin-bottom: 0px;  /* Space between text and button */
+            ">
+                Rythm Section
+            </div>
+        </div>
+        
+        <button id="submitBtn">Continue</button>
+        <style>
+        #submitBtn {
+            padding: 12px 26px;
+            border-radius: 8px;
+            border: none;
+            background: #2563eb;
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        #submitBtn:hover {
+            background: #1d4ed8;
+        }
+        </style>
+    """
+
+    # THIS IS THE CORRECT FORMAT — your previous JS was missing the wrapper function.
+    js_code = """
+export default function(component) {
+    const { setTriggerValue } = component;
+    const parent = component.parentElement;
+
+    const submitBtn = parent.querySelector("#submitBtn");
+
+    if (submitBtn) {
+        submitBtn.addEventListener("click", () => {
+            setTriggerValue("clicked", true);
+        });
+    }
+}
+"""
+
+    component = st.components.v2.component(
+        "rythemPageKey",
+        html=html_code,
+        js=js_code
+    )
+
+    response = component(key="rythemPageKey")
+
+    if response and hasattr(response, "clicked"):
+      go_pianoPage()
+      st.rerun()           # not required but matches your style
+
 def pianoPage():
+    if "pianoNotNum" not in st.session_state:
+        st.session_state.pianoNotNum = 0
+
+    st.title("Rythm Excercise")
+    st.write("")
+    st.markdown("""
+    <p style="font-size:18px; font-weight:normal;">
+    Press the start button and click on the game panel to begin.<br>
+    Try to press the "Space" key as the notes enter the green zone.<br>
+    Aim for the Black Line to maximize your score.
+    </p>
+    """, unsafe_allow_html=True)
+
+
     # Initialize session state if not exists
     if "button_clicked" not in st.session_state:
         st.session_state.button_clicked = False
@@ -1146,7 +1235,7 @@ def pianoPage():
         {"noteVal": 0.25, "noteKey": "E"},
         {"noteVal": 0.25, "noteKey": "E"},
         {"noteVal": 0.5,  "noteKey": "E"},
-        
+
         {"noteVal": 0.25, "noteKey": "E"},
         {"noteVal": 0.25, "noteKey": "D"},
         {"noteVal": 0.25, "noteKey": "C"},
@@ -1187,7 +1276,7 @@ def pianoPage():
             font-size:{heighOfTarget * 1.0}px;
             color:black;
         ">
-            A
+            
         </div>
         <div style="
             position:absolute;
@@ -1216,15 +1305,73 @@ def pianoPage():
 
     if st.session_state.startGame:
         animate_js += """
+        if (!sessionStorage.getItem("scoreList")) {
+            sessionStorage.setItem("scoreList", JSON.stringify(Array(26).fill(0.0)));
+        }
         // Define globals
         let startTime = performance.now();
         window.elapsedTime = 0;  // global variable you can use anywhere
         function updateTime() {
+
+
+            
+            let missClick = 0;
+            for(i=0; i<26; i++){
+                const block = document.getElementById("music-block-" + i);
+                const blockRightPos = parseFloat(window.getComputedStyle(block).right);
+                const targetLeftPos = parseFloat(window.getComputedStyle(target).right)+parseFloat(window.getComputedStyle(target).width);
+                const fontColor = window.getComputedStyle(block).color;
+                
+                if(blockRightPos>targetLeftPos && window.getComputedStyle(block).right && fontColor=="rgb(0, 0, 0)"){
+                    missClick+=1;
+                }
+            }
+            
+            if (!sessionStorage.getItem("notePressed")) {
+                sessionStorage.setItem("notePressed", false);
+            }
+            if (!sessionStorage.getItem("numOfNotes")) {
+                sessionStorage.setItem("numOfNotes", "0");
+            }
+            if (!sessionStorage.getItem("scoreSum")) {
+                sessionStorage.setItem("scoreSum", "0");
+            }
+            if (sessionStorage.getItem("notePressed")=="true"){
+                sessionStorage.setItem("numOfNotes", parseInt(sessionStorage.getItem("numOfNotes")) + 1);
+                //console.log("accuracy: "+(Math.round(parseInt(sessionStorage.getItem("scoreSum"))/(parseInt(sessionStorage.getItem("numOfNotes"))+missClick))));
+                //console.log(block.style.color)
+                sessionStorage.setItem("notePressed", false);
+            }
+            if (!sessionStorage.getItem("currentAccuracy")) {
+                sessionStorage.setItem("currentAccuracy", "None");
+            }
+            let accuracyShow = 0;
+            if (parseInt(sessionStorage.getItem("numOfNotes"))+missClick==0){
+                accuracyShow = "--";
+            }
+            else{
+                accuracyShow = Math.round(parseInt(sessionStorage.getItem("scoreSum"))/(parseInt(sessionStorage.getItem("numOfNotes"))+missClick));
+            }
+            sessionStorage.setItem("currentAccuracy", accuracyShow)
+            //console.log(accuracyShow);
+
+            if (!sessionStorage.getItem("over")) {
+                sessionStorage.setItem("over", "false");
+            }
+            console.log(parseInt(sessionStorage.getItem("numOfNotes"))+missClick);
+            
+            +missClick
+            if(parseInt(sessionStorage.getItem("numOfNotes"))+missClick==26){
+                console.log("DONE");
+                sessionStorage.setItem("over", "true");
+            }
+            console.log(sessionStorage.getItem("over"));
+
             const now = performance.now();
             window.elapsedTime = (now - startTime) / 1000;
             const timeElement = document.getElementById("elapsed-time");
             if (timeElement) {
-                timeElement.innerText = "Time: " + window.elapsedTime.toFixed(2) + " s";
+                timeElement.innerText = "Accuracy: " + accuracyShow + "%";
             }
             requestAnimationFrame(updateTime);
         }
@@ -1314,7 +1461,9 @@ def pianoPage():
         }}
 
 
-
+        const block = document.getElementById("music-block-" + 0);
+        const blockRightPos = parseFloat(window.getComputedStyle(block).right);
+        //console.log("This is me" + blockRightPos);
 
         window.addEventListener("keydown", (e) => {{
             if (e.code === "Space") {{
@@ -1358,8 +1507,12 @@ def pianoPage():
 
                     if (blockRightPos>=targetRightPos && blockLeftPos<=targetLeftPos && block.style.color == "black"){{
                         block.style.color = colour;
-                        console.log("YIPEEE");
                         playPiano(getNoteFreq(noteKeys[i]) + 10*accuracy, ((4*durations[i]*{distance} - (blockRightPos-targetRightPos) - 70) / (4*durations[i]*{distance})) * ((60 * (4 * durations[i])) / {st.session_state.bpm}));
+                        
+                        if (sessionStorage.getItem("scoreSum")) {{
+                            sessionStorage.setItem("scoreSum", parseInt(sessionStorage.getItem("scoreSum")) + Math.round(Math.abs(accuracy)*100));
+                        }}
+                        sessionStorage.setItem("notePressed", true);
                     }}
                 }}
             }}
@@ -1394,7 +1547,7 @@ def pianoPage():
         <div div id="target" style="
             position:absolute;
             top:50%;
-            right:800px;
+            left:150px;
             width:300px;
             height:{heighOfTarget}px;     /* rectangle height */
             background:#d8ebce;
@@ -1403,7 +1556,7 @@ def pianoPage():
         <div style="
             position:absolute;
             top:50%;
-            right:{800+150-2}px;
+            Left:{150+150-2}px;
             width:4px;
             height:{heighOfTarget}px;     /* rectangle height */
             background:black;
@@ -1419,8 +1572,8 @@ def pianoPage():
         color:black;
         font-size:18px;
         font-weight:bold;
-        display:none;
-    ">Time: 0.00 s</div>
+        
+    ">Accuracy: --%</div>
 
     {animate_js}
     """
@@ -1428,27 +1581,39 @@ def pianoPage():
 
     # Remove the width argument so it can take full page width
     components.html(html_code, height=200)
-
+#<button id="submitBtn" disabled>Continue</button>
     html_code = """
-        <button id="submitBtn">Continue</button>
-        <style>
-        #submitBtn {
-            padding: 12px 26px;
-            border-radius: 8px;
-            border: none;
-            background: #2563eb;
-            color: white;
-            font-weight: 600;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background 0.2s ease;
-        }
+<button id="submitBtn" disabled>Continue</button>
 
-        #submitBtn:hover {
-            background: #1d4ed8;
-        }
-        </style>
-    """
+<style>
+#submitBtn {
+    padding: 12px 26px;
+    border-radius: 8px;
+    border: none;
+    background: #2563eb;
+    color: white;
+    font-weight: 600;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+#submitBtn:hover:not(:disabled) {
+    background: #1d4ed8;
+}
+
+#submitBtn:disabled {
+    background: gray;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+</style>
+
+<script>
+</script>
+"""
+
+
 
     # THIS IS THE CORRECT FORMAT — your previous JS was missing the wrapper function.
     js_code = """
@@ -1458,25 +1623,42 @@ export default function(component) {
 
     const submitBtn = parent.querySelector("#submitBtn");
 
-    if (submitBtn) {
-        submitBtn.addEventListener("click", () => {
-            setTriggerValue("clicked", true);
-        });
+    function checkAccuracy() {
+        const accuracy = sessionStorage.getItem("currentAccuracy");
+        //console.log("Accuracy:", accuracy);
+
+        if (sessionStorage.getItem("over")=="true") {
+            submitBtn.disabled = false;
+        } else {
+            submitBtn.disabled = true;
+        }
     }
+
+    // Run immediately
+    checkAccuracy();
+
+    // Re-check every 500ms
+    setInterval(checkAccuracy, 500);
+
+    submitBtn.addEventListener("click", () => {
+        const accuracy = sessionStorage.getItem("currentAccuracy");
+        setTriggerValue("rythmAccuracy", accuracy);
+    });
 }
 """
 
     component = st.components.v2.component(
-        "testKey",
+        "pianoPageKey",
         html=html_code,
         js=js_code
     )
 
-    response = component(key="testKey")
 
-    if response and hasattr(response, "clicked"):
-        go_Tq1()
-        print("YoYO")        # <-- This will print in terminal
+    response = component(key="pianoPageKey")
+
+    if response and hasattr(response, "rythmAccuracy"):
+        st.session_state.rythmAccuracy = response.rythmAccuracy
+        go_chordsIntroPage()
         st.rerun()           # not required but matches your style
 
 def chordsIntroPage():
@@ -1549,9 +1731,8 @@ export default function(component) {
     response = component(key="testKey")
 
     if response and hasattr(response, "clicked"):
-        go_Tq1()
-        print("YoYO")        # <-- This will print in terminal
-        st.rerun()           # not required but matches your style
+      go_Tq1()
+      st.rerun()           # not required but matches your style
 
 def questionT1():
     submitted = st.session_state.get("submitted_mcq", False)
@@ -2598,8 +2779,8 @@ def summary():
     training_correct = sum([
         st.session_state.get(f"q{i}TScore") == answer_key_T[i] for i in range(1,6)
     ])
-
-    piano_accuracy = st.session_state.get("pianoAccuracy", 0)         # % out of 100
+    #piano_accuracy = st.session_state.get("pianoAccuracy", 0)         # % out of 100
+    piano_accuracy = int(st.session_state.get("rythmAccuracy",0))
     quiz_percent = (quiz_correct/5)*100                               # %
     training_percent = (training_correct/5)*100                       # %
 
@@ -2647,8 +2828,8 @@ def summary():
     with col2:
         st.write("**Score**")
         st.write(f"{quiz_correct} / 5")
-        st.write(f"{piano_accuracy}% Accuracy")
-        st.write(f"{training_correct} / 5 Correct")
+        st.write(f"{piano_accuracy}%")
+        st.write(f"{training_correct} / 5")
     with col3:
         st.write("**Progress Bar**")
         progress_bar(quiz_percent)
@@ -2717,6 +2898,8 @@ elif st.session_state.page == "question4":
   question4()
 elif st.session_state.page == "question5":
   question5()
+elif st.session_state.page == "rythemPage":
+  rythemPage()
 elif st.session_state.page == "pianoPage":
   pianoPage()
 elif st.session_state.page == "chordsIntroPage":
