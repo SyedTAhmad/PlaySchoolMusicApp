@@ -1217,7 +1217,7 @@ def pianoPage():
 
     bpm = 80
     noteType = 1/4
-    stop = 1400
+    stop = 10000#1400
     song = ["a", "a", "b", "g"]
     notes = [
         {"noteVal": 0.25, "noteKey": "E"},
@@ -2885,6 +2885,34 @@ def summary():
     # Render HTML table correctly
     components.html(table_html, height=250)
 
+        # -----------------------------
+    # USER ANSWERS VS CORRECT ANSWERS
+    # -----------------------------
+    st.write("---")
+    with st.expander("Show Your Answers"):
+        st.markdown("### **Your Answers:**")
+
+        # Quiz answers
+        st.markdown("#### **Musical Experience Quiz**")
+        for i in range(1, 6):
+            user_ans = st.session_state.get(f"q{i}Score")
+            correct = answer_key_Q[i]
+
+            st.write(f"**Question {i}:**")
+            st.write(f"Your answer: `{chr(96 + user_ans)}`")
+            st.write(f"Correct answer: `{chr(96 + correct)}`")
+
+        st.write("---")
+
+        # Training answers
+        st.markdown("#### **Chord Recognition Training**")
+        for i in range(1, 6):
+            user_ans = st.session_state.get(f"q{i}TScore")
+            correct = answer_key_T[i]
+
+            st.write(f"**Question {i}:**")
+            st.write(f"Your answer: `{chr(96 + user_ans)}`")
+            st.write(f"Correct answer: `{chr(96 + correct)}`")
 
 
 # ------------------ Logic ------------------
